@@ -9,7 +9,6 @@ import (
 	"strings"
 )
 
-var d = "https://cracovia.pl"
 var retryClient = client()
 
 type page struct {
@@ -18,15 +17,19 @@ type page struct {
 }
 
 func main() {
+	scrapePage("https://cracovia.pl")
+}
+
+func scrapePage(domain string) {
 	visited := make(map[string]bool)
 	crawledPages := make(chan page)
 	counter := 1
-	go visit(d, crawledPages)
+
+	go visit(domain, crawledPages)
+
 	for counter > 0 {
-		println("counter=%s", counter)
 		page := <-crawledPages
 		visited[page.domain] = true
-		println("visited=%s", len(visited))
 
 		for _, url := range page.links {
 			if !visited[url] {
@@ -40,28 +43,20 @@ func main() {
 
 func visit(domain string, c chan page) {
 	println(domain)
-	links := crawl(domain)
+	links := sameDomainLinks(domain)
 	c <- page{domain: domain, links: links}
 }
 
-func crawl(domain string) []string {
+func sameDomainLinks(domain string) []string {
 	var result []string
 	links := links(domain)
 	for _, url := range links {
 		isSameDomain := strings.Index(url, "/") == 0 && url != "/"
 		if isSameDomain {
-			result = append(result, d+url)
+			result = append(result, domain+url)
 		}
 	}
 	return result
-}
-
-func links(address string) []string {
-	resp, err := retryClient.Get(address)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return parseLinks(resp.Body)
 }
 
 func client() *retryablehttp.Client {
@@ -71,6 +66,14 @@ func client() *retryablehttp.Client {
 		MaxConnsPerHost: 10,
 	}
 	return retryClient
+}
+
+func links(address string) []string {
+	resp, err := retryClient.Get(address)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return parseLinks(resp.Body)
 }
 
 func parseLinks(body io.Reader) []string {
@@ -92,7 +95,6 @@ func parseLinks(body io.Reader) []string {
 
 				}
 			}
-
 		}
 	}
 }

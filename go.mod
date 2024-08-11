@@ -1,4 +1,4 @@
-module crawler
+module go-crawler
 
 go 1.15
 
